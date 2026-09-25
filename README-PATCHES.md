@@ -1,6 +1,6 @@
 # freebsd-linuxulator-patches
 
-Kernel patches for FreeBSD's Linux ABI layer (the Linuxulator), extracted from the work of getting the **Unreal Engine 5.8 editor** running inside a Debian Linux jail on FreeBSD 15.0-CURRENT.
+Kernel patches for FreeBSD's Linux ABI layer (the Linuxulator), extracted from the work of getting the **Unreal Engine 5.8 editor** running inside a Debian Linux jail on FreeBSD 15.1-CURRENT.
 
 Each patch fixes a place where the emulated syscall path diverges from Linux semantics in a way that **cannot** be worked around from userland with an `LD_PRELOAD` shim — the divergence happens inside the kernel, before any userland code can see it.
 
@@ -102,11 +102,11 @@ cc -o /tmp/mkdir_root   tests/mkdir_root.c   && /tmp/mkdir_root
 
 ## Tested on
 
-- FreeBSD 15.0-CURRENT, custom kernel config `NERVE`, ZFS root
+- FreeBSD 15.1-CURRENT, custom kernel config `NERVE`, ZFS root
 - Intel i9-10980XE (36 threads), 32 GB RAM, ASUS ROG RAMPAGE VI APEX
-- NVIDIA RTX 3090 Ti, driver 595.80
-- Debian Trixie Linuxulator jail
-- Unreal Engine 5.8, SM5 Vulkan, 18 shader compile workers
+- NVIDIA RTX 3090 Ti, driver 595.99.02
+- Debian Trixie Linuxulator jail - there are plans to test with Rocky Linux 9
+- Unreal Engine 5.8, SM5 Vulkan, 18 shader compile workers 
 
 ## Upstream status
 
