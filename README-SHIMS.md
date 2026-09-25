@@ -114,7 +114,7 @@ Set `SHIM_DEBUG=1` to log every interception to stderr, with the arguments and t
 
 ## Tested on
 
-- FreeBSD 15.0-CURRENT, custom kernel config `NERVE`, ZFS root
+- FreeBSD 15.1-CURRENT, custom kernel config `NERVE`, ZFS root
 - Intel i9-10980XE (36 threads), 32 GB RAM
 - NVIDIA RTX 3090 Ti, driver 595.80
 - Debian Trixie Linuxulator jail
