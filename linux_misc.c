@@ -1243,7 +1243,7 @@ linux_sched_setscheduler(struct thread *td,
 {
 	struct sched_param sched_param;
 	struct thread *tdt;
-	int error, policy, curpolicy;
++	int error, policy, curpolicy;
 
 	switch (args->policy) {
 	case LINUX_SCHED_OTHER:
@@ -1294,25 +1294,25 @@ linux_sched_setscheduler(struct thread *td,
 	if (tdt == NULL)
 		return (ESRCH);
 
-	/*
-	 * Linux permits unprivileged SCHED_OTHER -> SCHED_OTHER transitions;
-	 * glibc's pthread_setschedparam(3) issues exactly that on every
-	 * thread priority change, so .NET/MSBuild, JVMs and Unreal Engine
-	 * hit it constantly.  FreeBSD's kern_sched_setscheduler() requires
-	 * PRIV_SCHED_SETPOLICY unconditionally, and prison_priv_check()
-	 * never grants it, so in a jail the call fails with EPERM even for
-	 * root.  When the target thread is already in the timesharing
-	 * class, the request is equivalent to sched_setparam(), which
-	 * needs no privilege, so route it there to preserve Linux
-	 * semantics.
-	 */
-	if (policy == SCHED_OTHER &&
-	    kern_sched_getscheduler(td, tdt, &curpolicy) == 0 &&
-	    curpolicy == SCHED_OTHER) {
-		error = kern_sched_setparam(td, tdt, &sched_param);
-		PROC_UNLOCK(tdt->td_proc);
-		return (error);
-	}
++	 /*
++	 * Linux permits unprivileged SCHED_OTHER -> SCHED_OTHER transitions;
++	 * glibc's pthread_setschedparam(3) issues exactly that on every
++	 * thread priority change, so .NET/MSBuild, JVMs and Unreal Engine
++	 * hit it constantly.  FreeBSD's kern_sched_setscheduler() requires
++	 * PRIV_SCHED_SETPOLICY unconditionally, and prison_priv_check()
++	 * never grants it, so in a jail the call fails with EPERM even for
++	 * root.  When the target thread is already in the timesharing
++	 * class, the request is equivalent to sched_setparam(), which
++	 * needs no privilege, so route it there to preserve Linux
++	 * semantics.
++	 */
++	if (policy == SCHED_OTHER &&
++	    kern_sched_getscheduler(td, tdt, &curpolicy) == 0 &&
++	    curpolicy == SCHED_OTHER) {
++		error = kern_sched_setparam(td, tdt, &sched_param);
++		PROC_UNLOCK(tdt->td_proc);
++		return (error);
++	}
 
 	error = kern_sched_setscheduler(td, tdt, policy, &sched_param);
 	PROC_UNLOCK(tdt->td_proc);
