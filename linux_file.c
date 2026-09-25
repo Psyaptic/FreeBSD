@@ -737,33 +737,33 @@ linux_fchmodat(struct thread *td, struct linux_fchmodat_args *args)
 	    args->mode, 0));
 }
 
-/*
- * Linux mkdir(2) has no EISDIR in its errno contract: the "path names
- * an existing directory" case, including mkdir("/"), is reported as
- * EEXIST.  FreeBSD's lookup returns EISDIR for the root vnode, which
- * breaks Linux applications that create directory trees by walking
- * path components from the root and treating EEXIST as "already
- * present, continue" (observed fatally in Unreal Engine's derived-data
- * cache and shader-compiler initialization; also the source of
- * spurious "create dir" failures in many other Linux programs).
- */
-static int
-linux_mkdirat_common(struct thread *td, int dfd, const char *path, int mode)
-{
-	int error;
-
-	error = kern_mkdirat(td, dfd, path, UIO_USERSPACE, mode);
-	if (error == EISDIR)
-		error = EEXIST;
-	return (error);
-}
++ /*
++  * Linux mkdir(2) has no EISDIR in its errno contract: the "path names
++  * an existing directory" case, including mkdir("/"), is reported as
++  * EEXIST.  FreeBSD's lookup returns EISDIR for the root vnode, which
++  * breaks Linux applications that create directory trees by walking
++  * path components from the root and treating EEXIST as "already
++  * present, continue" (observed fatally in Unreal Engine's derived-data
++  * cache and shader-compiler initialization; also the source of
++  * spurious "create dir" failures in many other Linux programs).
++  */
++ static int
++ linux_mkdirat_common(struct thread *td, int dfd, const char *path, int mode)
++ {
++	int error;
++
++	error = kern_mkdirat(td, dfd, path, UIO_USERSPACE, mode);
++	if (error == EISDIR)
++		error = EEXIST;
++	return (error);
++ }
 
 #ifdef LINUX_LEGACY_SYSCALLS
 int
 linux_mkdir(struct thread *td, struct linux_mkdir_args *args)
 {
 
-	return (linux_mkdirat_common(td, AT_FDCWD, args->path, args->mode));
++	return (linux_mkdirat_common(td, AT_FDCWD, args->path, args->mode));
 }
 #endif
 
@@ -773,7 +773,7 @@ linux_mkdirat(struct thread *td, struct linux_mkdirat_args *args)
 	int dfd;
 
 	dfd = (args->dfd == LINUX_AT_FDCWD) ? AT_FDCWD : args->dfd;
-	return (linux_mkdirat_common(td, dfd, args->pathname, args->mode));
++	return (linux_mkdirat_common(td, dfd, args->pathname, args->mode));
 }
 
 #ifdef LINUX_LEGACY_SYSCALLS
