@@ -1,6 +1,6 @@
 # freebsd-jail-gaming
 
-Host-side configuration for a Debian Linuxulator jail on FreeBSD 15.0 that runs GPU-accelerated Linux applications — Steam and Proton titles, Minecraft, Discord, OBS Studio, and the Unreal Engine 5.8 editor — against an NVIDIA GPU.
+Host-side configuration for a Debian Linuxulator jail on FreeBSD 15.1 that runs GPU-accelerated Linux applications — Steam and Proton titles, Minecraft, Discord, OBS Studio, and the Unreal Engine 5.8 editor — against an NVIDIA GPU.
 
 No code here. This repository is the scaffolding: the jail definition, the mount table, the devfs ruleset, and the small amount of glue needed to make `linprocfs` and `linsysfs` look enough like Linux for the applications above to start.
 
@@ -163,11 +163,11 @@ Applications expecting a session bus should be launched under `dbus-run-session`
 
 ## Tested on
 
-- FreeBSD 15.0-CURRENT, custom kernel config `NERVE`, ZFS root
+- FreeBSD 15.1-CURRENT, custom kernel config `NERVE`, ZFS root
 - Intel i9-10980XE (36 threads), 32 GB RAM, ASUS ROG RAMPAGE VI APEX
-- NVIDIA RTX 3090 Ti, driver 595.80, Vulkan 1.4.329
+- NVIDIA RTX 3090 Ti, driver 595.99.02, Vulkan 1.4.360
 - Debian Trixie jail
-- Hyprland 0.55.4 on the host, with `no_hardware_cursors = true`
+- Hyprland 0.56.2 on the host, with `no_hardware_cursors = true`
 
 That last setting is not optional on NVIDIA — hardware cursors panic the host kernel.
 
