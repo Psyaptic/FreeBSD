@@ -54,6 +54,7 @@
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/time.h>
+#include <sys/unistd.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
 
@@ -1242,7 +1243,7 @@ linux_sched_setscheduler(struct thread *td,
 {
 	struct sched_param sched_param;
 	struct thread *tdt;
-	int error, policy;
+	int error, policy, curpolicy;
 
 	switch (args->policy) {
 	case LINUX_SCHED_OTHER:
@@ -1292,6 +1293,26 @@ linux_sched_setscheduler(struct thread *td,
 	tdt = linux_tdfind(td, args->pid, -1);
 	if (tdt == NULL)
 		return (ESRCH);
+
+	/*
+	 * Linux permits unprivileged SCHED_OTHER -> SCHED_OTHER transitions;
+	 * glibc's pthread_setschedparam(3) issues exactly that on every
+	 * thread priority change, so .NET/MSBuild, JVMs and Unreal Engine
+	 * hit it constantly.  FreeBSD's kern_sched_setscheduler() requires
+	 * PRIV_SCHED_SETPOLICY unconditionally, and prison_priv_check()
+	 * never grants it, so in a jail the call fails with EPERM even for
+	 * root.  When the target thread is already in the timesharing
+	 * class, the request is equivalent to sched_setparam(), which
+	 * needs no privilege, so route it there to preserve Linux
+	 * semantics.
+	 */
+	if (policy == SCHED_OTHER &&
+	    kern_sched_getscheduler(td, tdt, &curpolicy) == 0 &&
+	    curpolicy == SCHED_OTHER) {
+		error = kern_sched_setparam(td, tdt, &sched_param);
+		PROC_UNLOCK(tdt->td_proc);
+		return (error);
+	}
 
 	error = kern_sched_setscheduler(td, tdt, policy, &sched_param);
 	PROC_UNLOCK(tdt->td_proc);
@@ -1551,6 +1572,14 @@ linux_exit_group(struct thread *td, struct linux_exit_group_args *args)
 #define _LINUX_CAPABILITY_VERSION_2  0x20071026
 #define _LINUX_CAPABILITY_VERSION_3  0x20080522
 
+/*
+ * Highest capability number the emulation understands, used by
+ * PR_CAPBSET_READ below.  Tracks Linux's CAP_LAST_CAP, currently
+ * CAP_CHECKPOINT_RESTORE (40), added in Linux 5.9 and unchanged since.
+ * Bump this if a future Linux release defines a higher capability.
+ */
+#define LINUX_CAP_LAST_CAP  40
+
 struct l_user_cap_header {
 	l_int	version;
 	l_int	pid;
@@ -1786,14 +1815,27 @@ linux_prctl(struct thread *td, struct linux_prctl_args *args)
 		error = EINVAL;
 		break;
 	case LINUX_PR_CAPBSET_READ:
-#if 0
 		/*
-		 * This makes too much noise with Ubuntu Focal.
+		 * Linux returns 0 or 1 for whether the given capability is
+		 * present in the thread's capability bounding set, and only
+		 * fails with EINVAL when the capability number itself is
+		 * out of range (capabilities(7); prctl(2) PR_CAPBSET_READ).
+		 * This emulation does not implement a per-process bounding
+		 * set, so every valid capability number reads as present --
+		 * the same answer capget()/capset() above imply for a
+		 * default, unconfined process (the bounding set is a
+		 * ceiling on what could be gained, not what is currently
+		 * held in the effective/permitted sets, which are reported
+		 * as empty above for an unprivileged caller).
+		 *
+		 * Unconditionally failing here previously broke capability
+		 * bounding-set probes done by sandboxing helpers (bwrap,
+		 * pressure-vessel) before they decide how to set up a nested
+		 * sandbox.
 		 */
-		linux_msg(td, "unsupported prctl PR_CAPBSET_READ %d",
-		    (int)args->arg2);
-#endif
-		error = EINVAL;
+		if ((l_uint)args->arg2 > LINUX_CAP_LAST_CAP)
+			return (EINVAL);
+		td->td_retval[0] = 1;
 		break;
 	case LINUX_PR_SET_CHILD_SUBREAPER:
 		if (args->arg2 == 0) {
@@ -3081,6 +3123,32 @@ linux_mq_getsetattr(struct thread *td, struct linux_mq_getsetattr_args *args)
 	}
 
 	return (error);
+}
+
+int
+linux_kcmp(struct thread *td, struct linux_kcmp_args *args)
+{
+	int type;
+
+	switch (args->type) {
+	case LINUX_KCMP_FILE:
+		type = KCMP_FILE;
+		break;
+	case LINUX_KCMP_FILES:
+		type = KCMP_FILES;
+		break;
+	case LINUX_KCMP_SIGHAND:
+		type = KCMP_SIGHAND;
+		break;
+	case LINUX_KCMP_VM:
+		type = KCMP_VM;
+		break;
+	default:
+		return (EINVAL);
+	}
+
+	return (kern_kcmp(td, args->pid1, args->pid2, type, args->idx1,
+	    args->idx));
 }
 
 MODULE_DEPEND(linux, mqueuefs, 1, 1, 1);
